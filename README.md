@@ -10,16 +10,40 @@ Main script for orchestrating convertions between files types ultimately going f
 
 ### sid_to_geotiff.py
 
-Script for converting MrSID to GeoTIFF
+Converting MrSID to GeoTIFF
 
 ### geotiff_to_cog.py
 
-Script for converting GeoTIFF to Cloud Optimized GeoTIFF
+Converting GeoTIFF to Cloud Optimized GeoTIFF
+
+### validate_cogs.py
+
+Validate whether files are properly created COGs.
 
 ## Extract
 
-You can rename the current file by clicking the file name in the navigation bar or by clicking the **Rename** button in the file explorer.
+### extract.py
+
+Main script for orchestrating metadata extraction from cogs. Creates metadata jsons, csv, and STAC's.
+
+### create_metadata.py
+
+Calls helper extractor methods and compiles metadata according to template src\extract\metadata_templates\template.json.
+
+### extract_cog_metadata.py
+
+Pulls COG metadata using GDAL
+
+### extract_raster_metadata.py
+
+Pulls raster metadata using GDAL
 
 ## Load
 
-You can delete the current file by clicking the **Remove** button in the file explorer. The file will be moved into the **Trash** folder and automatically deleted after 7 days of inactivity.
+### load.py
+
+Main script for loading metadata and COGs into s3
+
+### cog_to_s3.py
+
+boto3 script for uploading COGs to s3
