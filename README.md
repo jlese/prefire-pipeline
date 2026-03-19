@@ -1,49 +1,72 @@
 # prefire - **California Geospatial Data Lake Pipeline**
 
-This repo is an orchestrator for the scripts used for the **California Geospatial Data Lake Pipeline**
+Pipeline for converting MrSID imagery to Cloud-Optimized GeoTIFFs, extracting metadata, and loading everything into S3.
 
-## Convert
+## Usage
 
-### convert.py
+```bash
+python -m src.main [convert|load|extract|all]
+```
 
-Main script for orchestrating convertions between files types ultimately going from MrSID to GeoTIFF to COG.
+| Command   | Description |
+|-----------|-------------|
+| `convert` | SID → GeoTIFF → COG → validate |
+| `load`    | Upload COGs to S3 → extract metadata → upload metadata to S3 |
+| `extract` | Build metadata / STAC / CSV for local COGs (standalone) |
+| `all`     | Run `convert` then `load` (default) |
 
-### sid_to_geotiff.py
+## Pipeline Flow
 
-Converting MrSID to GeoTIFF
+```
+convert ──→ load
+              ├─ [1] Upload COGs to S3
+              ├─ [2] Extract metadata (using S3 URIs)
+              └─ [3] Upload metadata to S3
+```
 
-### geotiff_to_cog.py
+The load step calls extract internally after COGs are uploaded, so the extracted metadata contains the correct S3 URIs and ETags.
 
-Converting GeoTIFF to Cloud Optimized GeoTIFF
+The extract step checks S3 for an existing `summary.csv`. If found it downloads and appends to it; otherwise it creates a new one.
 
-### validate_cogs.py
+## Environment Variables
 
-Validate whether files are properly created COGs.
+All variables are loaded from a `.env` file via `python-dotenv`.
 
-## Extract
+| Variable | Required By | Description |
+|----------|-------------|-------------|
+| `SID_DIRECTORY` | convert | Directory containing `.sid` source files |
+| `GEOTIFF_DIRECTORY` | convert | Output directory for GeoTIFF files |
+| `COG_DIRECTORY` | convert, load, extract | Directory for COG files (output of convert, input to load/extract) |
+| `COUNTY_LIST` | convert | Comma-separated list of counties to process |
+| `BUCKET_NAME` | load, extract | Target S3 bucket name |
+| `STAC_COLLECTION` | load, extract | STAC collection ID used in metadata |
+| `METADATA_DIRECTORY` | load, extract | Local directory for metadata output (JSON, STAC, CSV) |
 
-### extract.py
+## Project Structure
 
-Main script for orchestrating metadata extraction from cogs. Creates metadata jsons, csv, and STAC's.
-
-### create_metadata.py
-
-Calls helper extractor methods and compiles metadata according to template src\extract\metadata_templates\template.json.
-
-### extract_cog_metadata.py
-
-Pulls COG metadata using GDAL
-
-### extract_raster_metadata.py
-
-Pulls raster metadata using GDAL
-
-## Load
-
-### load.py
-
-Main script for loading metadata and COGs into s3
-
-### cog_to_s3.py
-
-boto3 script for uploading COGs to s3
+```
+src/
+├── main.py                  # Entry point, argument parsing
+├── convert/
+│   ├── convert.py           # Convert orchestrator
+│   ├── sid_to_geotiff.py    # MrSID → GeoTIFF (mrsidgeodecode)
+│   ├── geotiff_to_cog.py    # GeoTIFF → COG (GDAL)
+│   └── validate_cogs.py     # Validate COG files (rio cogeo)
+├── extract/
+│   ├── extract.py           # Extract orchestrator
+│   ├── create_metadata.py   # Build metadata dict, write JSON/CSV
+│   ├── create_stac.py       # Build STAC item from metadata
+│   ├── extract_cog_metadata.py    # COG-specific metadata (GDAL)
+│   ├── extract_raster_metadata.py # Raster/spatial metadata (GDAL)
+│   └── metadata_templates/
+│       └── template.json    # Metadata JSON template
+├── load/
+│   ├── load.py              # Load orchestrator
+│   ├── cog_to_s3.py         # Upload COGs to S3
+│   ├── metadata_to_s3.py    # Upload metadata to S3
+│   └── utils/
+│       └── upload_to_s3.py  # Generic S3 upload helper
+└── shared/
+    ├── validate_env.py      # Environment variable validation
+    └── print_progress_bar.py # CLI progress bar
+```

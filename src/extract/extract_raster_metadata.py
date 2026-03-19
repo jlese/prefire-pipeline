@@ -1,11 +1,7 @@
-"""extract_raster_metadata.py
+"""Extract core raster/spatial metadata from a COG via GDAL.
 
-Opens a COG with GDAL and extracts core raster/spatial metadata:
-  - CRS (EPSG, WKT)
-  - geotransform, width, height
-  - bands, dtype, nodata, colorinterp
-  - pixel size + units
-  - bbox and footprint in EPSG:4326
+Extracts CRS (EPSG, WKT), geotransform, dimensions, bands, dtype,
+nodata, color interpretation, pixel size, bbox, and footprint in EPSG:4326.
 """
 
 from __future__ import annotations
@@ -16,6 +12,15 @@ gdal.UseExceptions()
 
 
 def extract_raster_metadata(cog_path: str) -> dict:
+    """Return spatial and raster metadata for *cog_path*.
+
+    Args:
+        cog_path: Path to a COG file.
+
+    Returns:
+        Dict with keys: bbox, footprint, crs, width, height,
+        pixel_size, transform, bands, dtype, nodata, colorinterp.
+    """
     ds = gdal.Open(cog_path, gdal.GA_ReadOnly)
     if ds is None:
         raise IOError(f"GDAL could not open: {cog_path}")

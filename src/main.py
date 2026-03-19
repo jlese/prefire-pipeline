@@ -1,26 +1,73 @@
-'''
-Main entry point for the pipeline
-'''
+"""Prefire pipeline entry point.
+
+Usage:
+    python -m src.main [convert|load|extract|all]
+
+Steps:
+    convert  - SID → GeoTIFF → COG → validate
+    load     - Upload COGs to S3 → extract metadata → upload metadata to S3
+    extract  - Build metadata / STAC / CSV for local COGs (standalone)
+    all      - Run convert then load (default)
+"""
+
+import argparse
+import sys
+
+from dotenv import load_dotenv
+from src.shared.check_bucket_status import check_bucket_status
 
 def main():
-    '''
-    Main function to run the pipeline
-    '''
-    print("Running the pipeline...")
+    """Parse arguments and run the requested pipeline step(s)."""
+    load_dotenv()
+    args = _parse_args(sys.argv[1:])
 
-'''
-Run the convert pipeline steps
-'''
-def run_convert():
+    if not check_bucket_status():
+        print("Issues found in S3 bucket. Would you like to cancel? (y/n)")
+        choice = input().lower()
+        if choice == "y":
+            print("Exiting.")
+            return
 
-    return "Convert step completed"
+    if args.command == "convert":
+        _run_convert()
+    elif args.command == "load":
+        _run_load()
+    elif args.command == "extract":
+        _run_extract()
+    elif args.command == "all":
+        _run_convert()
+        _run_load()  # load calls extract internally
 
-def run_decode():
-    return "Decode step completed"
 
-def run_extract():
-    return "Extract step completed"
+def _run_convert():
+    """Run the convert step."""
+    from src.convert.convert import run_convert
+    run_convert()
 
 
-def run_load():
-    return "Load step completed"
+def _run_load():
+    """Run the load step (includes extract)."""
+    from src.load.load import run_load
+    run_load()
+
+
+def _run_extract():
+    """Run the extract step standalone."""
+    from src.extract.extract import run_extract
+    run_extract()
+
+
+def _parse_args(argv=None):
+    parser = argparse.ArgumentParser(description="Prefire pipeline")
+    parser.add_argument(
+        "command",
+        nargs="?",
+        default="all",
+        choices=["convert", "extract", "load", "all"],
+        help="Pipeline step to run (default: all)",
+    )
+    return parser.parse_args(argv)
+
+
+if __name__ == "__main__":
+    main()

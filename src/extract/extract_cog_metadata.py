@@ -1,3 +1,5 @@
+"""Extract COG-specific metadata (layout, block size, compression, overviews) via GDAL."""
+
 from __future__ import annotations
 
 from osgeo import gdal
@@ -6,6 +8,15 @@ gdal.UseExceptions()
 
 
 def extract_cog_metadata(cog_path: str) -> dict:
+    """Return COG structure metadata for *cog_path*.
+
+    Args:
+        cog_path: Path to a COG file.
+
+    Returns:
+        Dict with keys: is_cog, layout, blocksize, compression,
+        interleave, overview_resampling, overview_levels.
+    """
     ds = gdal.Open(cog_path, gdal.GA_ReadOnly)
     if ds is None:
         raise IOError(f"GDAL could not open: {cog_path}")

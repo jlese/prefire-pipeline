@@ -1,18 +1,36 @@
+"""Convert GeoTIFF (.tif) files to Cloud-Optimized GeoTIFF using GDAL."""
 
-from osgeo import gdal
-import subprocess
 import glob
 import os
 
+from osgeo import gdal
+
+from src.shared.check_if_file_exists import check_if_county_files_exist
+from src.shared.parse_county import extract_county
 from src.shared.print_progress_bar import print_progress_bar
 
-def geotiff_to_cog(geotiff_directory, cog_directory):
+
+def geotiff_to_cog(geotiff_directory: str, cog_directory: str) -> None:
+    """Translate GeoTIFFs to COG format.
+
+    Args:
+        geotiff_directory: Directory containing .tif files.
+        cog_directory:     Output directory for COG files.
+    """
     geotiffs = glob.glob(os.path.join(geotiff_directory, "*.tif"))
     total = len(geotiffs)
     print_progress_bar(0, total, prefix='Progress:', suffix='Complete', length=50)
+
     for i, filename in enumerate(geotiffs, start=1):
+        county = extract_county(filename)
+        if check_if_county_files_exist(county, cog_directory):
+            print(f"  COGs for {county} already exist. Skipping.")
+            continue
         print(f"\nProcessing {filename}...")
-        cog_filename = os.path.join(cog_directory, os.path.basename(filename).replace(".tif", "_cog.tif"))
+        cog_filename = os.path.join(
+            cog_directory,
+            os.path.basename(filename).replace(".tif", "_cog.tif"),
+        )
         try:
             gdal.Translate(cog_filename, filename, format='COG', creationOptions=['BIGTIFF=YES'])
         except Exception as e:

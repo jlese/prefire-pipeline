@@ -1,11 +1,15 @@
+"""Build a complete metadata dict for a COG and write JSON / CSV outputs.
+
+Uses the template at metadata_templates/template.json as a base, then
+populates it with raster metadata, COG structure, URIs, and lineage info.
+"""
+
 from __future__ import annotations
 
-import copy
 import csv
 import hashlib
 import json
 import os
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,22 +21,29 @@ from src.extract.extract_raster_metadata import extract_raster_metadata
 
 _TEMPLATE_PATH = Path(__file__).parent / "metadata_templates" / "template.json"
 
+
 def _load_template() -> dict:
+    """Load the JSON metadata template."""
     with open(_TEMPLATE_PATH) as f:
         return json.load(f)
 
 
 def _sha256(path: str, chunk: int = 1 << 20) -> str:
+    """Compute SHA-256 hex digest of a file."""
     h = hashlib.sha256()
     with open(path, "rb") as f:
         for block in iter(lambda: f.read(chunk), b""):
             h.update(block)
     return h.hexdigest()
 
+
 def _gdal_version() -> str:
+    """Return the GDAL release version string."""
     return gdal.VersionInfo("RELEASE_NAME")
 
+
 def _parse_filename(filename: str) -> dict:
+    """Extract id, county, fips, and acquisition year from a COG filename."""
     stem = Path(filename).stem
     parts = stem.split("_")
     return {
@@ -41,6 +52,7 @@ def _parse_filename(filename: str) -> dict:
         "fips": parts[1] if len(parts) > 1 else None,
         "acquisition_year": parts[2] if len(parts) > 2 else None,
     }
+
 
 def build_metadata(
     cog_path: str,
@@ -56,6 +68,24 @@ def build_metadata(
     collection: str | None = None,
     compute_checksum: bool = False,
 ) -> dict:
+    """Build a fully-populated metadata dict for a single COG.
+
+    Args:
+        cog_path:         Path to the COG file.
+        county:           Override county name (otherwise parsed from filename).
+        fips:             Override FIPS code.
+        s3_uri:           S3 URI after upload.
+        etag:             S3 ETag after upload.
+        http_uri:         Optional HTTP URI.
+        sid_name:         Original SID filename.
+        geotiff_name:     Intermediate GeoTIFF filename.
+        acquisition_date: Override acquisition date.
+        collection:       STAC collection ID.
+        compute_checksum: Whether to compute SHA-256 (slow for large files).
+
+    Returns:
+        Populated metadata dict.
+    """
     meta = _load_template()
     filename = os.path.basename(cog_path)
     parsed = _parse_filename(filename)
@@ -135,6 +165,7 @@ _CSV_COLUMNS = [
 
 
 def _flatten_for_csv(metadata: dict) -> dict:
+    """Flatten nested metadata dict into a single-level dict for CSV output."""
     bbox = metadata["spatial"]["bbox"]
     ps   = metadata["spatial"]["pixel_size"]
     cog  = metadata["cog"]

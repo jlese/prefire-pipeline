@@ -1,3 +1,5 @@
+"""Build STAC Item dicts from pipeline metadata and write them to JSON."""
+
 from __future__ import annotations
 
 import json
@@ -8,7 +10,16 @@ _EXTENSIONS = [
     "https://stac-extensions.github.io/projection/v1.1.0/schema.json",
 ]
 
+
 def build_stac_item(metadata: dict) -> dict:
+    """Convert a pipeline metadata dict into a STAC Item Feature.
+
+    Args:
+        metadata: Full metadata dict produced by build_metadata().
+
+    Returns:
+        A STAC 1.0.0 Feature dict.
+    """
     spatial   = metadata["spatial"]
     raster    = metadata["raster"]
     cog       = metadata["cog"]

@@ -1,3 +1,5 @@
+"""Upload COG files to S3 and return a URI / ETag map."""
+
 import glob
 import os
 
@@ -7,6 +9,16 @@ from src.load.utils.upload_to_s3 import upload_to_s3
 
 
 def cog_to_s3(cog_directory: str, bucket_name: str, prefix: str) -> dict[str, dict]:
+    """Upload every .cog in *cog_directory* to S3.
+
+    Args:
+        cog_directory: Local directory containing .cog files.
+        bucket_name:   Target S3 bucket.
+        prefix:        S3 key prefix (e.g. "cogs").
+
+    Returns:
+        Dict mapping filename → {"s3_uri": ..., "etag": ...}.
+    """
     s3_client = boto3.client("s3")
     cogs = sorted(glob.glob(os.path.join(cog_directory, "*.cog")))
     total = len(cogs)
